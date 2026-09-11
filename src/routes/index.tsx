@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Search,
   Plus,
@@ -19,7 +20,17 @@ import {
   ArrowUpDown,
   MoreHorizontal,
   ReceiptText,
+  ExternalLink,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import csEmiteLogo from "@/assets/cslogo.png.asset.json";
+import csEmpLogo from "@/assets/logo-csemp.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,22 +53,28 @@ export const Route = createFileRoute("/")({
 });
 
 type ClientTag = { label: string; tone: "muted" | "success" | "danger" };
+type SystemKey = "csemite" | "csemp";
+
+const systems: Record<SystemKey, { name: string; logo: string; className: string }> = {
+  csemite: { name: "CS Emite", logo: csEmiteLogo.url, className: "bg-white" },
+  csemp: { name: "CSEMP", logo: csEmpLogo.url, className: "bg-white" },
+};
 
 const clients: {
   initials: string;
   name: string;
   cnpj: string;
   tag: ClientTag;
+  system: SystemKey;
   note?: string;
   active?: boolean;
-  badge?: boolean;
 }[] = [
   {
     initials: "LT",
     name: "Loja Teste",
     cnpj: "99.999.999/0001-91",
     tag: { label: "Sem cobrança", tone: "muted" },
-    badge: true,
+    system: "csemite",
   },
   {
     initials: "ON",
@@ -65,6 +82,7 @@ const clients: {
     cnpj: "22.333.444/0001-99",
     tag: { label: "Teste grátis • 8 dias", tone: "success" },
     note: "R$ 45,00 · vence 18/09/2026",
+    system: "csemp",
   },
   {
     initials: "FC",
@@ -72,6 +90,7 @@ const clients: {
     cnpj: "99.887.766/0001-55",
     tag: { label: "Teste grátis • 8 dias", tone: "success" },
     note: "R$ 60,00 · vence 18/09/2026",
+    system: "csemite",
   },
   {
     initials: "PS",
@@ -79,6 +98,7 @@ const clients: {
     cnpj: "44.555.666/0001-77",
     tag: { label: "Vencido há 34 dias", tone: "danger" },
     note: "R$ 60,00 · vence 07/08/2026",
+    system: "csemite",
     active: true,
   },
   {
@@ -87,49 +107,111 @@ const clients: {
     cnpj: "11.222.333/0001-81",
     tag: { label: "Teste grátis • 8 dias", tone: "success" },
     note: "R$ 60,00 · vence 18/09/2026",
+    system: "csemp",
   },
 ];
 
-const notas = [
+type Nota = {
+  id: string;
+  numero: string;
+  serie: string;
+  chave: string;
+  modelo: "NFC-e" | "NF-e";
+  consumidor: string;
+  documento: string;
+  emissao: string;
+  valor: string;
+  status: "Autorizada" | "Cancelada";
+  protocolo: string;
+  natureza: string;
+  itens: { desc: string; qtd: string; valor: string }[];
+};
+
+const notas: Nota[] = [
   {
-    numero: "000019 · série 2",
+    id: "000019",
+    numero: "000019",
+    serie: "série 2",
+    chave: "3526 0944 5556 6600 0177 6500 2000 0019 1234 5678 90",
     modelo: "NFC-e",
     consumidor: "Consumidor de Teste",
-    emissao: "25 ago 2026",
+    documento: "123.456.789-00",
+    emissao: "25 ago 2026 · 14:32",
     valor: "R$ 569,70",
-    status: "Autorizada" as const,
+    status: "Autorizada",
+    protocolo: "135260012345678",
+    natureza: "Venda de mercadoria",
+    itens: [
+      { desc: "Pão francês (kg)", qtd: "12", valor: "R$ 155,40" },
+      { desc: "Bolo de cenoura", qtd: "6", valor: "R$ 214,30" },
+      { desc: "Refrigerante 2L", qtd: "10", valor: "R$ 200,00" },
+    ],
   },
   {
-    numero: "000018 · série 1",
+    id: "000018",
+    numero: "000018",
+    serie: "série 1",
+    chave: "3526 0944 5556 6600 0177 5500 1000 0018 2345 6789 01",
     modelo: "NF-e",
     consumidor: "Consumidor de Teste",
-    emissao: "21 ago 2026",
+    documento: "123.456.789-00",
+    emissao: "21 ago 2026 · 09:11",
     valor: "R$ 1.382,30",
-    status: "Autorizada" as const,
+    status: "Autorizada",
+    protocolo: "135260012345671",
+    natureza: "Venda de mercadoria",
+    itens: [
+      { desc: "Farinha de trigo (sc 25kg)", qtd: "8", valor: "R$ 982,30" },
+      { desc: "Açúcar refinado (sc 30kg)", qtd: "4", valor: "R$ 400,00" },
+    ],
   },
   {
-    numero: "000017 · série 1",
+    id: "000017",
+    numero: "000017",
+    serie: "série 1",
+    chave: "3526 0944 5556 6600 0177 5500 1000 0017 3456 7890 12",
     modelo: "NF-e",
     consumidor: "Consumidor de Teste",
-    emissao: "18 ago 2026",
+    documento: "123.456.789-00",
+    emissao: "18 ago 2026 · 16:45",
     valor: "R$ 307,50",
-    status: "Cancelada" as const,
+    status: "Cancelada",
+    protocolo: "135260012345662",
+    natureza: "Venda de mercadoria",
+    itens: [{ desc: "Fermento biológico (cx)", qtd: "5", valor: "R$ 307,50" }],
   },
   {
-    numero: "000016 · série 2",
+    id: "000016",
+    numero: "000016",
+    serie: "série 2",
+    chave: "3526 0944 5556 6600 0177 6500 2000 0016 4567 8901 23",
     modelo: "NFC-e",
     consumidor: "Consumidor de Teste",
-    emissao: "14 ago 2026",
+    documento: "123.456.789-00",
+    emissao: "14 ago 2026 · 11:02",
     valor: "R$ 385,60",
-    status: "Autorizada" as const,
+    status: "Autorizada",
+    protocolo: "135260012345653",
+    natureza: "Venda de mercadoria",
+    itens: [
+      { desc: "Sonho de creme", qtd: "24", valor: "R$ 185,60" },
+      { desc: "Café coado 300ml", qtd: "40", valor: "R$ 200,00" },
+    ],
   },
   {
-    numero: "000015 · série 1",
+    id: "000015",
+    numero: "000015",
+    serie: "série 1",
+    chave: "3526 0944 5556 6600 0177 5500 1000 0015 5678 9012 34",
     modelo: "NF-e",
     consumidor: "Consumidor de Teste",
-    emissao: "11 ago 2026",
+    documento: "123.456.789-00",
+    emissao: "11 ago 2026 · 08:20",
     valor: "R$ 434,50",
-    status: "Autorizada" as const,
+    status: "Autorizada",
+    protocolo: "135260012345644",
+    natureza: "Venda de mercadoria",
+    itens: [{ desc: "Leite integral (cx 12un)", qtd: "10", valor: "R$ 434,50" }],
   },
 ];
 
@@ -139,12 +221,26 @@ const tagTone: Record<ClientTag["tone"], string> = {
   danger: "bg-destructive/20 text-destructive",
 };
 
+function SystemBadge({ system, size = "sm" }: { system: SystemKey; size?: "sm" | "md" }) {
+  const s = systems[system];
+  return (
+    <span
+      title={s.name}
+      className={`inline-flex shrink-0 items-center justify-center rounded-md ${s.className} ${
+        size === "sm" ? "size-6 p-0.5" : "size-9 p-1"
+      }`}
+    >
+      <img src={s.logo} alt={`Sistema ${s.name}`} className="size-full object-contain" />
+    </span>
+  );
+}
+
 function Sidebar() {
   return (
-    <aside className="hidden w-[320px] shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-[320px] shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-6 py-5">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-success/15 text-success">
-          <ReceiptText className="size-5" />
+        <div className="flex size-10 items-center justify-center rounded-xl bg-white p-1">
+          <img src={csEmiteLogo.url} alt="CS Emite" className="size-full object-contain" />
         </div>
         <div>
           <p className="text-[17px] font-extrabold leading-tight">Portal do escritório</p>
@@ -166,7 +262,7 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav className="mt-3 flex-1 overflow-y-auto">
+      <nav className="mt-3 min-h-0 flex-1 overflow-y-auto">
         {clients.map((c) => (
           <button
             key={c.name}
@@ -185,7 +281,7 @@ function Sidebar() {
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2">
                 <span className="truncate text-[15px] font-semibold">{c.name}</span>
-                {c.badge && <ReceiptText className="size-3.5 shrink-0 text-sidebar-muted" />}
+                <SystemBadge system={c.system} />
               </span>
               <span className="mt-0.5 block text-[13px] text-sidebar-muted">{c.cnpj}</span>
               <span
@@ -201,7 +297,7 @@ function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-6">
+      <div className="shrink-0 border-t border-sidebar-border bg-sidebar p-6">
         <button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-success/60 text-sm font-semibold text-success transition-colors hover:bg-success/10">
           <Plus className="size-4" /> Nova empresa
         </button>
@@ -246,6 +342,10 @@ function ClientHeader() {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-4">
           <h1 className="text-[28px] font-extrabold tracking-tight">Padaria Sol</h1>
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5 text-sm font-semibold">
+            <SystemBadge system="csemite" />
+            {systems.csemite.name}
+          </span>
           <span className="inline-flex items-center gap-2 rounded-full bg-danger-soft px-3.5 py-1.5 text-sm font-bold text-destructive">
             <span className="size-2 rounded-full bg-destructive" />
             Vencido há 34 dias
@@ -415,7 +515,114 @@ function ModelCards() {
   );
 }
 
-function NotasTable() {
+function NotaDetails({ nota, onClose }: { nota: Nota | null; onClose: () => void }) {
+  return (
+    <Dialog open={!!nota} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        {nota && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex flex-wrap items-center gap-3 text-xl">
+                Nota {nota.numero}
+                <span className="text-base font-normal text-muted-foreground">{nota.serie}</span>
+                <span
+                  className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${
+                    nota.modelo === "NFC-e"
+                      ? "bg-info-soft text-info"
+                      : "bg-success-soft text-accent-foreground"
+                  }`}
+                >
+                  {nota.modelo}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold ${
+                    nota.status === "Autorizada"
+                      ? "bg-success-soft text-accent-foreground"
+                      : "bg-danger-soft text-destructive"
+                  }`}
+                >
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      nota.status === "Autorizada" ? "bg-success" : "bg-destructive"
+                    }`}
+                  />
+                  {nota.status}
+                </span>
+              </DialogTitle>
+              <DialogDescription>
+                Emitida em {nota.emissao} · {nota.natureza}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                { label: "Consumidor", value: nota.consumidor },
+                { label: "CPF/CNPJ", value: nota.documento },
+                { label: "Valor total", value: nota.valor },
+                { label: "Protocolo", value: nota.protocolo },
+              ].map((f) => (
+                <div key={f.label} className="rounded-xl border border-border bg-secondary/60 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {f.label}
+                  </p>
+                  <p className="mt-1 text-[15px] font-semibold">{f.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-border bg-secondary/60 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Chave de acesso
+              </p>
+              <p className="mt-1 break-all font-mono text-sm">{nota.chave}</p>
+            </div>
+
+            <div className="rounded-xl border border-border">
+              <p className="border-b border-border px-4 py-3 text-sm font-bold">Itens da nota</p>
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-2 font-semibold">Descrição</th>
+                    <th className="px-4 py-2 font-semibold">Qtd</th>
+                    <th className="px-4 py-2 text-right font-semibold">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nota.itens.map((i) => (
+                    <tr key={i.desc} className="border-t border-border/70">
+                      <td className="px-4 py-2.5">{i.desc}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground">{i.qtd}</td>
+                      <td className="px-4 py-2.5 text-right font-medium">{i.valor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <span className="inline-flex items-center gap-2 rounded-md bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-foreground">
+                <AlertTriangle className="size-3" /> XML pendente
+              </span>
+              <div className="flex flex-wrap gap-3">
+                <button className="flex h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold transition-colors hover:bg-secondary">
+                  <Download className="size-4 text-muted-foreground" /> Baixar XML
+                </button>
+                <button
+                  data-nota-id={nota.id}
+                  className="flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  <ExternalLink className="size-4" /> Ver nota no CS Emite
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NotasTable({ onSelect }: { onSelect: (n: Nota) => void }) {
   return (
     <section className="rounded-2xl border border-border bg-card shadow-card">
       <div className="flex flex-wrap items-center gap-4 p-6">
@@ -463,8 +670,14 @@ function NotasTable() {
           </thead>
           <tbody>
             {notas.map((n) => (
-              <tr key={n.numero} className="border-b border-border/70 last:border-0">
-                <td className="py-4 pr-4 text-sm font-semibold">{n.numero}</td>
+              <tr
+                key={n.id}
+                onClick={() => onSelect(n)}
+                className="cursor-pointer border-b border-border/70 transition-colors last:border-0 hover:bg-secondary/70"
+              >
+                <td className="py-4 pr-4 text-sm font-semibold">
+                  {n.numero} · {n.serie}
+                </td>
                 <td className="py-4 pr-4">
                   <span
                     className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${
@@ -477,7 +690,9 @@ function NotasTable() {
                   </span>
                 </td>
                 <td className="py-4 pr-4 text-sm text-muted-foreground">{n.consumidor}</td>
-                <td className="py-4 pr-4 text-sm text-muted-foreground">{n.emissao}</td>
+                <td className="py-4 pr-4 text-sm text-muted-foreground">
+                  {n.emissao.split(" · ")[0]}
+                </td>
                 <td className="py-4 pr-4 text-sm font-medium">{n.valor}</td>
                 <td className="py-4 pr-4">
                   <span
@@ -501,7 +716,14 @@ function NotasTable() {
                   </span>
                 </td>
                 <td className="py-4">
-                  <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(n);
+                    }}
+                    aria-label={`Ações da nota ${n.numero}`}
+                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary"
+                  >
                     <MoreHorizontal className="size-4" />
                   </button>
                 </td>
@@ -533,6 +755,8 @@ function NotasTable() {
 }
 
 function Index() {
+  const [selected, setSelected] = useState<Nota | null>(null);
+
   return (
     <div className="flex min-h-screen bg-background font-sans text-foreground">
       <Sidebar />
@@ -543,9 +767,10 @@ function Index() {
           <OverviewHeader />
           <Stats />
           <ModelCards />
-          <NotasTable />
+          <NotasTable onSelect={setSelected} />
         </div>
       </main>
+      <NotaDetails nota={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
